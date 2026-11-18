@@ -2,7 +2,8 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useT } from '../i18n';
 import { useAuth } from '../auth/AuthProvider';
-import { getBook, listBooks } from '../api/books';
+import { bookJourney, getBook, listBooks } from '../api/books';
+import { spineFor } from '../lib/shelf';
 import { canRequest, LoanError, requestLoan } from '../api/loans';
 import { useNextMeetup } from '../api/meetups';
 import { blockMessage } from '../lib/loans';
@@ -10,7 +11,7 @@ import { displayStatus } from '../lib/books';
 import type { BlockReason, Book, Handover } from '../types';
 import { BookCover, BookGrid, StatusChips } from '../components/BookBits';
 import { ErrorBox, Loading, StatusBox, useToast } from '../components/Feedback';
-import { Steps } from '../components/Steps';
+import { Stamps } from '../components/Stamps';
 import { Field } from '../components/Field';
 import { NotFound } from './NotFound';
 
@@ -79,7 +80,7 @@ function RequestForm({ book, onSent }: { book: Book; onSent: (loanId: string) =>
 
 export function BookPage() {
   const { id = '' } = useParams();
-  const { t } = useT();
+  const { t, date } = useT();
   const { session, loading: authLoading } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
@@ -89,10 +90,13 @@ export function BookPage() {
   const [block, setBlock] = useState<BlockReason | null | undefined>(undefined);
   const [open, setOpen] = useState(params.get('request') === '1');
   const [failed, setFailed] = useState(false);
+  const [journey, setJourney] = useState<{ listed_at: string; completed_loans: number } | null>(null);
 
   useEffect(() => {
     setBook(undefined);
+    setJourney(null);
     getBook(id).then(setBook).catch(() => setFailed(true));
+    bookJourney(id).then(setJourney).catch(() => setJourney(null));
     listBooks()
       .then((all) => setMore(all.filter((b) => b.id !== id)))
       .catch(() => setMore([]));
@@ -115,7 +119,13 @@ export function BookPage() {
   if (book === null) return <NotFound variant="book" />;
 
   const status = displayStatus(book);
-  const similar = more.filter((b) => b.language === book.language || b.category === book.category).slice(0, 4);
+  const ownerShelf = more.filter((b) => b.owner_id === book.owner_id).slice(0, 8);
+  const similar = more.filter((b) => b.owner_id !== book.owner_id && (b.language === book.language || b.category === book.category)).slice(0, 4);
+  const statusText =
+    status === 'available' ? t('status.available')
+      : status === 'reserved' ? t('status.reserved')
+        : status === 'paused' ? t('status.paused')
+          : book.loan_due_date ? t('status.onLoanUntil', { date: date(book.loan_due_date) }) : t('status.onLoan');
   const sent = (loanId: string) => {
     toast.show(t('bookpage.sent'));
     navigate(`/loans/${loanId}`);
@@ -131,7 +141,10 @@ export function BookPage() {
         </ol>
       </nav>
       <div className="two-col section">
-        <div style={{ maxWidth: 280 }}><BookCover book={book} /></div>
+        <div style={{ maxWidth: 280, width: '100%', justifySelf: 'center' }}>
+          <div className="cover-tilt"><BookCover book={book} /></div>
+          <p className="small muted" style={{ textAlign: 'center', marginTop: 12 }}>{t('bookpage.pulled')}</p>
+        </div>
         <div className="stack">
           <h1 dir="auto" style={{ margin: 0 }}>{book.title}</h1>
           {book.title_latin && <p className="lead" dir="ltr" lang="en" style={{ margin: 0, textAlign: 'start' }}>{book.title_latin}</p>}
@@ -155,6 +168,49 @@ export function BookPage() {
         </div>
       </div>
 
+      <section className="section" aria-labelledby="journey-title">
+        <h2 id="journey-title">{t('journey.title')}</h2>
+        <ol className="journey">
+          <li>
+            <div className="track"><span className="dot" aria-hidden="true" /><span className="line" aria-hidden="true" /></div>
+            <span className="step-title">{t('journey.listed')}</span>
+            <span className="step-sub">{journey ? date(journey.listed_at) : date(book.created_at)}</span>
+          </li>
+          <li>
+            <div className="track"><span className="dot" aria-hidden="true" /><span className="line" aria-hidden="true" /></div>
+            <span className="step-title">{t('journey.loans')}</span>
+            <span className="step-sub">{journey && journey.completed_loans > 0 ? t('journey.loansN', { n: journey.completed_loans }) : t('journey.loansNone')}</span>
+          </li>
+          <li>
+            <div className="track"><span className="dot now" aria-hidden="true" /><span className={`line${status === 'available' ? ' todo' : ''}`} aria-hidden="true" /></div>
+            <span className="step-title">{t('journey.now')}</span>
+            <span className="step-sub">{statusText}</span>
+          </li>
+          <li>
+            <div className="track"><span className="dot todo" aria-hidden="true" /><span className="line todo" aria-hidden="true" /></div>
+            <span className="step-title">{t('journey.next')}</span>
+            <span className="step-sub">{status === 'available' && !book.is_sample ? t('journey.nextYou') : '—'}</span>
+          </li>
+        </ol>
+      </section>
+
+      {ownerShelf.length > 0 && (
+        <section className="section" aria-labelledby="owner-shelf-title">
+          <h2 id="owner-shelf-title">{t('bookpage.ownerShelf')}</h2>
+          <div className="mini-shelf">
+            {ownerShelf.map((b) => {
+              const s = spineFor(b);
+              return (
+                <Link key={b.id} to={`/books/${b.id}`} className={`tone-${s.tone}`} style={{ ['--h' as string]: `${Math.round(s.height * 0.7)}px` }} aria-label={b.title}>
+                  <span dir="auto">{b.title}</span>
+                </Link>
+              );
+            })}
+          </div>
+          <div className="mini-plank" aria-hidden="true" />
+        </section>
+      )}
+
       <section className="section">
         <h2>{t('bookpage.details')}</h2>
         <dl className="details">
@@ -170,7 +226,7 @@ export function BookPage() {
 
       <section className="section">
         <h2>{t('bookpage.howTitle')}</h2>
-        <Steps items={[t('home.step1'), t('home.step2'), t('home.step3')]} />
+        <Stamps />
       </section>
 
       {similar.length > 0 && (

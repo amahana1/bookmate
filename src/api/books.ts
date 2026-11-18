@@ -93,6 +93,13 @@ export async function listMyBooks(userId: string): Promise<Book[]> {
   return (data ?? []) as Book[];
 }
 
+/** Public aggregate: when the book was listed and how many loans have completed. */
+export async function bookJourney(id: string): Promise<{ listed_at: string; completed_loans: number } | null> {
+  const { data, error } = await supabase.rpc('book_journey', { p_book_id: id });
+  if (error) return null;
+  return ((data as { listed_at: string; completed_loans: number }[] | null) ?? [])[0] ?? null;
+}
+
 /** One book; null when it doesn't exist, was deleted, or is hidden from the caller. */
 export async function getBook(id: string): Promise<Book | null> {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;

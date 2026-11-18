@@ -37,7 +37,7 @@ export function Header({ waiting = 0 }: { waiting?: number }) {
   useEffect(() => {
     setMenuOpen(false);
     setAccountOpen(false);
-  }, [loc.pathname, loc.search]);
+  }, [loc.pathname, loc.search, loc.hash]);
 
   useEffect(() => {
     if (!accountOpen) return;
@@ -82,7 +82,8 @@ export function Header({ waiting = 0 }: { waiting?: number }) {
             <span className="latin" lang="en">Book Mate</span>
           </Link>
           <nav className="main-nav" aria-label={t('nav.main')}>
-            <NavLink to="/books">{t('nav.books')}</NavLink>
+            <NavLink to="/books">{t('nav.shelves')}</NavLink>
+            <Link to="/#map">{t('nav.map')}</Link>
             <NavLink to="/how-it-works">{t('nav.how')}</NavLink>
           </nav>
           <SearchForm idSuffix="desktop" />
@@ -126,7 +127,8 @@ export function Header({ waiting = 0 }: { waiting?: number }) {
           <div className="container">
             <SearchForm idSuffix="mobile" />
             <nav aria-label={t('nav.main')}>
-              <Link to="/books">{t('nav.books')}</Link>
+              <Link to="/books">{t('nav.shelves')}</Link>
+              <Link to="/#map">{t('nav.map')}</Link>
               <Link to="/how-it-works">{t('nav.how')}</Link>
               <Link to="/add">{t('nav.add')}</Link>
               {session && (

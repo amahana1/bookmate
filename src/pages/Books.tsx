@@ -4,6 +4,7 @@ import { useT } from '../i18n';
 import { listBooks } from '../api/books';
 import { BOOK_LANGS, CATEGORIES, filterBooks, paginate, sortBooks } from '../lib/books';
 import { TELEGRAM_GROUP_URL } from '../lib/config';
+import { bezirkOf } from '../lib/berlin';
 import type { Book, BookLang, Category } from '../types';
 import { BookGrid } from '../components/BookBits';
 import { ErrorBox, Loading, StatusBox } from '../components/Feedback';
@@ -38,10 +39,12 @@ export function Books() {
     setParams(next);
   };
 
-  const filtered = useMemo(
-    () => (books ? sortBooks(filterBooks(books, { q, language, category, availableOnly }), sort, locale) : []),
-    [books, q, language, category, availableOnly, sort, locale],
-  );
+  const district = params.get('d');
+  const filtered = useMemo(() => {
+    if (!books) return [];
+    const inDistrict = district ? books.filter((b) => bezirkOf(b.neighbourhood) === district) : books;
+    return sortBooks(filterBooks(inDistrict, { q, language, category, availableOnly }), sort, locale);
+  }, [books, q, language, category, availableOnly, sort, locale, district]);
   const { items, pages } = paginate(filtered, page);
   const current = Math.min(Math.max(1, page || 1), pages);
 
@@ -95,6 +98,12 @@ export function Books() {
         </label>
       </div>
 
+      {district && (
+        <div className="chips" style={{ marginBottom: 16 }}>
+          <span className="chip" lang="de">{t('books.districtChip', { d: district })}</span>
+          <button type="button" className="btn-link" onClick={() => update({ d: null })}>{t('books.clearDistrict')}</button>
+        </div>
+      )}
       {failed && <ErrorBox>{t('common.error')}</ErrorBox>}
       {!books && !failed && <Loading />}
       {books && filtered.length === 0 && (

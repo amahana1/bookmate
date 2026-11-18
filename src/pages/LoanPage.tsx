@@ -12,7 +12,6 @@ import { berlinToday } from '../lib/format';
 import type { LoanEvent, LoanRow, Meetup, ReportKind } from '../types';
 import { BookCover } from '../components/BookBits';
 import { ErrorBox, Loading, StatusBox, useToast } from '../components/Feedback';
-import { ProgressSteps } from '../components/ProgressSteps';
 import { MeetupBox, meetupWhen } from '../components/MeetupBox';
 import { WarningIcon } from '../components/Icons';
 import { NotFound } from './NotFound';
@@ -138,33 +137,63 @@ export function LoanPage() {
     return null;
   })();
 
+  // Library-card rows: a dated stamp when done, a filled "now" mark for the step in progress, an empty slot when upcoming.
+  const current = progressStep(loan);
+  const ended = box === 'ended' && loan.status !== 'closed';
+  const stampDates = [loan.created_at, loan.accepted_at, loan.received_at, loan.return_marked_at ?? loan.closed_at, loan.return_marked_at ?? loan.closed_at, loan.closed_at];
+  const cardRows = (['loan.step0', 'loan.step1', 'loan.step2', 'loan.step3', 'loan.step4', 'loan.step5'] as const).map((key, i) => {
+    const done = loan.status === 'closed' || i < current;
+    const now = !done && !ended && i === current;
+    const when = stampDates[i];
+    return { key, state: done ? 'done' : now ? 'now' : 'todo', text: done ? (when ? date(when) : '✓') : now ? t('loancard.now') : t('loancard.upcoming') };
+  });
+
   return (
     <>
       <nav className="breadcrumb" aria-label="breadcrumb">
         <ol><li><Link to="/me?tab=loans">{t('nav.myLoans')}</Link></li><li aria-current="page" dir="auto">{loan.book_title}</li></ol>
       </nav>
-      <div className="section" style={{ display: 'flex', gap: 18, alignItems: 'flex-start' }}>
-        <BookCover book={{ id: loan.book_id, title: loan.book_title, cover_path: loan.book_cover_path }} small />
-        <div className="stack" style={{ gap: 6, minWidth: 0 }}>
-          <h1 style={{ margin: 0 }}><Link to={`/books/${loan.book_id}`} dir="auto" style={{ color: 'inherit' }}>{loan.book_title}</Link></h1>
-          <p className="lead" style={{ margin: 0 }}>{t(`loan.status.${loan.status}`)}</p>
-          <p className="muted" style={{ margin: 0 }}>
-            {t('loan.owner')}: <span dir="auto">{loan.owner_first_name}</span> · {t('loan.borrower')}: <span dir="auto">{loan.borrower_first_name}</span>
-          </p>
-        </div>
-      </div>
+      <div className="section loan-grid">
+        <section className="loan-card" aria-labelledby="loan-card-title">
+          <div className="loan-card-head">
+            <h1 id="loan-card-title">{t('loancard.title')}</h1>
+            <span className="holes" aria-hidden="true"><span /><span /></span>
+          </div>
+          <div className="loan-card-book">
+            <BookCover book={{ id: loan.book_id, title: loan.book_title, cover_path: loan.book_cover_path }} small />
+            <div style={{ minWidth: 0 }}>
+              <p style={{ margin: 0, fontSize: 21, fontWeight: 700 }}><Link to={`/books/${loan.book_id}`} dir="auto" style={{ color: 'inherit' }}>{loan.book_title}</Link></p>
+              <p style={{ margin: 0 }}>{t(`loan.status.${loan.status}`)}</p>
+              <p className="muted" style={{ margin: 0 }}>
+                {t('loan.owner')}: <span dir="auto">{loan.owner_first_name}</span> · {t('loan.borrower')}: <span dir="auto">{loan.borrower_first_name}</span>
+              </p>
+            </div>
+          </div>
+          <ol className="loan-card-rows" aria-label={t('loan.progress')}>
+            {cardRows.map((r) => (
+              <li key={r.key} aria-current={r.state === 'now' ? 'step' : undefined}>
+                <span className="label">{t(r.key)}</span>
+                <span className={`date-stamp${r.state === 'done' ? '' : ` ${r.state}`}`}>{r.state === 'done' ? `✓ ${r.text}` : r.text}</span>
+              </li>
+            ))}
+          </ol>
+          {(loan.status === 'reading' || loan.status === 'return_marked') && loan.due_date && (
+            <div style={{ padding: '20px 22px', display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
+              <div className="return-stamp">
+                <span className="small" style={{ fontWeight: 700 }}>{t('loancard.returnBy')}</span>
+                <span className="when">{due}</span>
+              </div>
+              <p className="muted" style={{ margin: 0, flex: '1 1 180px' }}>{t('loan.extensions', { used: loan.extensions_used })}</p>
+            </div>
+          )}
+        </section>
 
-      <section className="section"><ProgressSteps current={progressStep(loan)} /></section>
-
-      <section className="section stack">
-        {actionFailed && <ErrorBox>{t('loan.actionFailed')}</ErrorBox>}
-        {overdue && <div className="error-box" role="status"><WarningIcon /><div>{t('loan.overdue')}</div></div>}
-        {loan.has_open_report && <StatusBox><p style={{ margin: 0 }}>{t('loan.problemOpen')}</p></StatusBox>}
-        {box !== 'ended' && isParty && <StatusBox title={t('loan.nowTitle')}>{actionBox()}</StatusBox>}
-        {box === 'ended' && endedText && <StatusBox><p style={{ margin: 0 }}>{endedText}</p></StatusBox>}
-      </section>
-
-      <div className="section cols-2">
+        <div className="stack" style={{ gap: 20 }}>
+          {actionFailed && <ErrorBox>{t('loan.actionFailed')}</ErrorBox>}
+          {overdue && <div className="error-box" role="status"><WarningIcon /><div>{t('loan.overdue')}</div></div>}
+          {loan.has_open_report && <StatusBox><p style={{ margin: 0 }}>{t('loan.problemOpen')}</p></StatusBox>}
+          {box !== 'ended' && isParty && <StatusBox title={t('loan.nowTitle')}>{actionBox()}</StatusBox>}
+          {box === 'ended' && endedText && <StatusBox><p style={{ margin: 0 }}>{endedText}</p></StatusBox>}
         <section className="card stack">
           <h2 style={{ fontSize: 28, margin: 0 }}>{t('loan.handoverTitle')}</h2>
           <p style={{ margin: 0 }}>
@@ -194,13 +223,8 @@ export function LoanPage() {
           )}
         </section>
 
-        {(loan.status === 'reading' || loan.status === 'return_marked') && loan.due_date ? (
-          <section className="card stack">
-            <h2 style={{ fontSize: 28, margin: 0 }}>{t('loan.dueTitle')}</h2>
-            <p style={{ margin: 0, fontSize: 19, fontWeight: 600 }}>{t('loan.dueDate', { date: due })}</p>
-            <p className="muted" style={{ margin: 0 }}>{t('loan.extensions', { used: loan.extensions_used })}</p>
-          </section>
-        ) : <MeetupBox />}
+          <MeetupBox />
+        </div>
       </div>
 
       {isParty && loan.accepted_at && (
