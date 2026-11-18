@@ -42,7 +42,8 @@ function Meetups({ meetups, reload }: { meetups: Meetup[]; reload: () => void })
   const toast = useToast();
   const [editing, setEditing] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_MEETUP);
-  const [error, setError] = useState(false);
+  /** 'form': the date/times are incomplete; 'failed': the server call did not go through. */
+  const [error, setError] = useState<'form' | 'failed' | null>(null);
   const [toDelete, setToDelete] = useState<string | null>(null);
 
   const startEdit = (m: Meetup) => {
@@ -53,8 +54,8 @@ function Meetups({ meetups, reload }: { meetups: Meetup[]; reload: () => void })
 
   const save = async (e: FormEvent) => {
     e.preventDefault();
-    if (!form.date || !form.start || !form.end || form.end <= form.start) return setError(true);
-    setError(false);
+    if (!form.date || !form.start || !form.end || form.end <= form.start) return setError('form');
+    setError(null);
     const input = {
       starts_at: berlinLocalToIso(form.date, form.start), ends_at: berlinLocalToIso(form.date, form.end),
       place: form.place.trim() || MEETUP_PLACE_PLACEHOLDER, neighbourhood: form.neighbourhood,
@@ -67,13 +68,14 @@ function Meetups({ meetups, reload }: { meetups: Meetup[]; reload: () => void })
       setForm(EMPTY_MEETUP);
       reload();
     } catch {
-      setError(true);
+      setError('failed');
     }
   };
 
   const now = new Date().toISOString();
   return (
     <div className="stack">
+      {error === 'failed' && <ErrorBox>{t('common.error')}</ErrorBox>}
       {meetups.length === 0 ? <p className="muted">{t('admin.noMeetups')}</p> : (
         <ul className="loan-list">
           {meetups.map((m) => (
@@ -92,7 +94,7 @@ function Meetups({ meetups, reload }: { meetups: Meetup[]; reload: () => void })
       )}
       <form className="card form-grid" onSubmit={save}>
         <h3 style={{ margin: 0 }}>{editing ? t('admin.editMeetup') : t('admin.addMeetup')}</h3>
-        {error && <ErrorBox>{t('admin.meetupError')}</ErrorBox>}
+        {error === 'form' && <ErrorBox>{t('admin.meetupError')}</ErrorBox>}
         <div className="form-grid two">
           <div className="field"><label htmlFor="m-date">{t('admin.date')}</label><input id="m-date" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></div>
           <div className="field"><label htmlFor="m-nb">{t('signup.neighbourhood')}</label>
@@ -117,7 +119,17 @@ function Meetups({ meetups, reload }: { meetups: Meetup[]; reload: () => void })
       </form>
       <ConfirmDialog open={toDelete !== null} text={t('admin.deleteMeetup')} confirmLabel={t('admin.delete')}
         onCancel={() => setToDelete(null)}
-        onConfirm={async () => { const id = toDelete!; setToDelete(null); await deleteMeetup(id); reload(); }} />
+        onConfirm={async () => {
+          const id = toDelete!;
+          setToDelete(null);
+          setError(null);
+          try {
+            await deleteMeetup(id);
+            reload();
+          } catch {
+            setError('failed');
+          }
+        }} />
     </div>
   );
 }
@@ -132,8 +144,11 @@ export function Admin() {
   const [meetups, setMeetups] = useState<Meetup[]>([]);
   const [q, setQ] = useState('');
   const [failed, setFailed] = useState(false);
+  /** Counts failed actions (0 = none); a new count re-focuses the message so it is seen from anywhere on the page. */
+  const [actionFailures, setActionFailures] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [confirmSamples, setConfirmSamples] = useState(false);
+  const [toClose, setToClose] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -146,14 +161,16 @@ export function Admin() {
   }, []);
   useEffect(() => { void load(); }, [load]);
 
+  /** Runs an admin action; a failure shows a message above the page instead of replacing it. */
   const act = async (fn: () => Promise<unknown>) => {
     try {
       await fn();
+      setActionFailures(0);
       toast.show(t('loan.actionDone'));
-      await load();
     } catch {
-      setFailed(true);
+      setActionFailures((n) => n + 1);
     }
+    await load();
   };
 
   const sampleCount = books.filter((b) => b.is_sample).length;
@@ -165,6 +182,10 @@ export function Admin() {
   return (
     <div className="stack">
       <h1>{t('nav.admin')}</h1>
+      {actionFailures > 0 && <ErrorBox focusKey={actionFailures}>{t('common.error')}</ErrorBox>}
+      <ConfirmDialog open={toClose !== null} text={t('admin.closeConfirm')} confirmLabel={t('admin.closeLoan')}
+        onCancel={() => setToClose(null)}
+        onConfirm={() => { const id = toClose!; setToClose(null); void act(() => adminCloseLoan(id)); }} />
 
       <section className="section" style={{ maxWidth: 640 }}>
         <h2>{t('admin.stats')}</h2>
@@ -185,7 +206,7 @@ export function Admin() {
                   {r.message && <p dir="auto" style={{ margin: 0 }}>{r.message}</p>}
                   <div className="btn-row" style={{ gap: 8 }}>
                     <button className="btn btn-secondary btn-small" onClick={() => act(() => adminResolveReport(r.report_id))}>{t('admin.resolve')}</button>
-                    <button className="btn btn-secondary btn-small" onClick={() => act(() => adminCloseLoan(r.loan_id))}>{t('admin.closeLoan')}</button>
+                    <button className="btn btn-secondary btn-small" onClick={() => setToClose(r.loan_id)}>{t('admin.closeLoan')}</button>
                     <Link to={`/loans/${r.loan_id}`}>{t('admin.openLoan')}</Link>
                   </div>
                 </div>

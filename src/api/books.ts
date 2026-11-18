@@ -6,17 +6,36 @@ import { toAsciiDigits } from '../lib/format';
 export const BOOK_COLUMNS =
   'id, owner_id, title, title_latin, author, translator, publisher, language, category, year, condition, loan_months, handover_methods, cover_path, status, hidden, is_sample, neighbourhood, loan_state, loan_due_date, created_at';
 
-/** All books visible in the public list, newest first. */
+const PAGE = 1000; // Supabase's maximum rows per request
+
+/** All books visible in the public list, newest first (fetched in pages of 1000). */
 export async function listBooks(): Promise<Book[]> {
-  const { data, error } = await supabase
-    .from('books')
-    .select(BOOK_COLUMNS)
-    .is('deleted_at', null)
-    .eq('hidden', false)
-    .order('created_at', { ascending: false })
-    .limit(2000);
-  if (error) throw error;
-  return (data ?? []) as Book[];
+  const all: Book[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from('books')
+      .select(BOOK_COLUMNS)
+      .is('deleted_at', null)
+      .eq('hidden', false)
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (error) throw error;
+    all.push(...((data ?? []) as Book[]));
+    if (!data || data.length < PAGE) return all;
+  }
+}
+
+/** The owner's other books plus a few in the same language — for the book page, without loading the whole list. */
+export async function listNearby(book: Pick<Book, 'id' | 'owner_id' | 'language'>): Promise<Book[]> {
+  const base = () => supabase.from('books').select(BOOK_COLUMNS).is('deleted_at', null).eq('hidden', false).neq('id', book.id);
+  const [own, lang] = await Promise.all([
+    base().eq('owner_id', book.owner_id).order('created_at', { ascending: false }).limit(8),
+    base().eq('language', book.language).neq('owner_id', book.owner_id).order('created_at', { ascending: false }).limit(8),
+  ]);
+  if (own.error) throw own.error;
+  if (lang.error) throw lang.error;
+  return [...((own.data ?? []) as Book[]), ...((lang.data ?? []) as Book[])];
 }
 
 export class DuplicateBookError extends Error {}
@@ -54,20 +73,33 @@ function rethrow(error: { code?: string }): never {
   throw error;
 }
 
+async function removeCover(path: string | null | undefined): Promise<void> {
+  if (path) await supabase.storage.from('covers').remove([path]);
+}
+
 export async function createBook(v: BookFormValues, cover?: Blob | null): Promise<Book> {
   const cover_path = cover ? await uploadCover(cover) : null;
   const { data, error } = await supabase.from('books').insert({ ...toRow(v), cover_path }).select(BOOK_COLUMNS).single();
-  if (error) rethrow(error);
+  if (error) {
+    await removeCover(cover_path); // don't leave an orphaned photo behind
+    rethrow(error);
+  }
   return data as Book;
 }
 
-/** `cover`: a new image, `null` to remove the photo, `undefined` to keep it. */
-export async function updateBook(id: string, v: BookFormValues, cover?: Blob | null): Promise<void> {
+/** `cover`: a new image, `null` to remove the photo, `undefined` to keep it. `oldCoverPath` is deleted once replaced. */
+export async function updateBook(id: string, v: BookFormValues, cover?: Blob | null, oldCoverPath?: string | null): Promise<void> {
   const patch: Record<string, unknown> = toRow(v);
-  if (cover) patch.cover_path = await uploadCover(cover);
+  const uploaded = cover ? await uploadCover(cover) : null;
+  if (uploaded) patch.cover_path = uploaded;
   if (cover === null) patch.cover_path = null;
-  const { error } = await supabase.from('books').update(patch).eq('id', id);
-  if (error) rethrow(error);
+  const { data, error } = await supabase.from('books').update(patch).eq('id', id).select('id');
+  if (error || !data || data.length === 0) {
+    await removeCover(uploaded);
+    if (error) rethrow(error);
+    throw new Error('book not updated');
+  }
+  if (cover !== undefined && oldCoverPath && oldCoverPath !== uploaded) await removeCover(oldCoverPath);
 }
 
 export async function setBookPaused(id: string, paused: boolean): Promise<void> {

@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useT } from '../i18n';
 import { useAuth } from '../auth/AuthProvider';
-import { bookJourney, getBook, listBooks } from '../api/books';
+import { bookJourney, getBook, listNearby } from '../api/books';
 import { spineFor } from '../lib/shelf';
 import { canRequest, LoanError, requestLoan } from '../api/loans';
 import { useNextMeetup } from '../api/meetups';
@@ -80,7 +80,7 @@ function RequestForm({ book, onSent }: { book: Book; onSent: (loanId: string) =>
 
 export function BookPage() {
   const { id = '' } = useParams();
-  const { t, date } = useT();
+  const { t, date, num } = useT();
   const { session, loading: authLoading } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
@@ -97,10 +97,13 @@ export function BookPage() {
     setJourney(null);
     getBook(id).then(setBook).catch(() => setFailed(true));
     bookJourney(id).then(setJourney).catch(() => setJourney(null));
-    listBooks()
-      .then((all) => setMore(all.filter((b) => b.id !== id)))
-      .catch(() => setMore([]));
+    setMore([]);
   }, [id]);
+
+  useEffect(() => {
+    if (!book) return;
+    listNearby(book).then((all) => setMore(all.filter((b) => b.id !== book.id))).catch(() => setMore([]));
+  }, [book]);
 
   useEffect(() => {
     if (!book || authLoading) return;
@@ -217,7 +220,7 @@ export function BookPage() {
           <dt>{t('add.author')}</dt><dd dir="auto">{book.author}</dd>
           {book.translator && (<><dt>{t('add.translator')}</dt><dd dir="auto">{book.translator}</dd></>)}
           {book.publisher && (<><dt>{t('add.publisher')}</dt><dd dir="auto">{book.publisher}</dd></>)}
-          {book.year && (<><dt>{t('add.year')}</dt><dd>{book.year}</dd></>)}
+          {book.year && (<><dt>{t('add.year')}</dt><dd>{num(book.year)}</dd></>)}
           <dt>{t('add.language')}</dt><dd>{t(`lang.${book.language}`)}</dd>
           <dt>{t('add.category')}</dt><dd>{t(`cat.${book.category}`)}</dd>
           <dt>{t('add.condition')}</dt><dd>{t(`cond.${book.condition}`)}</dd>

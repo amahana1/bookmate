@@ -1,7 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import { fa } from '../i18n/fa';
 import type { BlockReason } from '../types';
-import { blockMessage, nextAction, progressStep, waitingForMe } from './loans';
+import { blockMessage, loanErrorMessage, nextAction, progressStep, waitingForMe } from './loans';
+
+describe('loanErrorMessage', () => {
+  it('explains a book that was lent to someone else', () => {
+    expect(loanErrorMessage('book_unavailable')).toBe('block.book_unavailable');
+  });
+  it('explains a borrower who already has a book out', () => {
+    expect(loanErrorMessage('has_active_loan')).toBe('block.has_active_loan');
+  });
+  it('explains a missing permission separately from a changed loan', () => {
+    expect(loanErrorMessage('not_allowed')).toBe('loan.error.notAllowed');
+    expect(loanErrorMessage('bad_state')).toBe('loan.actionFailed');
+  });
+  it('falls back to the generic message', () => {
+    expect(loanErrorMessage('unknown')).toBe('common.error');
+  });
+});
 import type { LoanRow } from '../types';
 
 const OWNER = 'owner';

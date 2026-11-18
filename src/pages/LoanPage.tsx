@@ -4,10 +4,10 @@ import { useT, type TKey } from '../i18n';
 import { useAuth } from '../auth/AuthProvider';
 import {
   cancelLoan, confirmReceived, confirmReturn, getLoan, getLoanContacts, getLoanEvents, markReturned,
-  reportProblem, requestExtension, respondExtension, respondRequest, type Contact,
+  reportProblem, requestExtension, respondExtension, respondRequest, LoanError, type Contact,
 } from '../api/loans';
 import { getMeetup, nextMeetup } from '../api/meetups';
-import { nextAction, progressStep } from '../lib/loans';
+import { loanErrorMessage, nextAction, progressStep } from '../lib/loans';
 import { berlinToday } from '../lib/format';
 import type { LoanEvent, LoanRow, Meetup, ReportKind } from '../types';
 import { BookCover } from '../components/BookBits';
@@ -31,7 +31,7 @@ export function LoanPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [meetup, setMeetup] = useState<Meetup | null>(null);
   const [busy, setBusy] = useState(false);
-  const [actionFailed, setActionFailed] = useState(false);
+  const [actionError, setActionError] = useState<TKey | null>(null);
   const [kind, setKind] = useState<ReportKind>('not_received');
   const [reportText, setReportText] = useState('');
   const [reported, setReported] = useState(false);
@@ -65,15 +65,15 @@ export function LoanPage() {
   /** Runs a loan action; returns true on success. The page reloads either way so stale buttons disappear. */
   const run = async (fn: () => Promise<unknown>): Promise<boolean> => {
     setBusy(true);
-    setActionFailed(false);
+    setActionError(null);
     let ok = false;
     try {
       await fn();
       ok = true;
       toast.show(t('loan.actionDone'));
       notifyLoansChanged();
-    } catch {
-      setActionFailed(true);
+    } catch (x) {
+      setActionError(x instanceof LoanError ? loanErrorMessage(x.code) : 'common.error');
     } finally {
       await load();
       setBusy(false);
@@ -189,7 +189,7 @@ export function LoanPage() {
         </section>
 
         <div className="stack" style={{ gap: 20 }}>
-          {actionFailed && <ErrorBox>{t('loan.actionFailed')}</ErrorBox>}
+          {actionError && <ErrorBox>{t(actionError)}</ErrorBox>}
           {overdue && <div className="error-box" role="status"><WarningIcon /><div>{t('loan.overdue')}</div></div>}
           {loan.has_open_report && <StatusBox><p style={{ margin: 0 }}>{t('loan.problemOpen')}</p></StatusBox>}
           {box !== 'ended' && isParty && <StatusBox title={t('loan.nowTitle')}>{actionBox()}</StatusBox>}

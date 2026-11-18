@@ -88,7 +88,7 @@ export function BookForm() {
     try {
       const blob = cover ? await resizeImage(cover) : removeCover ? null : undefined;
       if (editing && original) {
-        await updateBook(original.id, v, blob);
+        await updateBook(original.id, v, blob, original.cover_path);
         toast.show(t('add.savedText'));
         navigate('/me?tab=books');
       } else {
@@ -156,17 +156,17 @@ export function BookForm() {
       <form className="form-grid" onSubmit={submit} noValidate>
         <h2 style={{ margin: '12px 0 0' }}>{t('add.aboutBook')}</h2>
         <Field label={t('add.titleField')} error={err('title')}>
-          {(p) => <input {...p} dir="auto" value={v.title} onChange={(e) => set('title', e.target.value)} />}
+          {(p) => <input {...p} dir="auto" maxLength={200} value={v.title} onChange={(e) => set('title', e.target.value)} />}
         </Field>
         <Field label={t('add.titleLatin')} optional={t('common.optional')} hint={t('add.titleLatinHint')}>
-          {(p) => <input {...p} dir="ltr" lang="en" value={v.title_latin} onChange={(e) => set('title_latin', e.target.value)} />}
+          {(p) => <input {...p} dir="ltr" lang="en" maxLength={200} value={v.title_latin} onChange={(e) => set('title_latin', e.target.value)} />}
         </Field>
         <div className="form-grid two">
           <Field label={t('add.author')} error={err('author')}>
-            {(p) => <input {...p} dir="auto" value={v.author} onChange={(e) => set('author', e.target.value)} />}
+            {(p) => <input {...p} dir="auto" maxLength={200} value={v.author} onChange={(e) => set('author', e.target.value)} />}
           </Field>
           <Field label={t('add.translator')} optional={t('common.optional')} hint={t('add.translatorHint')}>
-            {(p) => <input {...p} dir="auto" value={v.translator} onChange={(e) => set('translator', e.target.value)} />}
+            {(p) => <input {...p} dir="auto" maxLength={200} value={v.translator} onChange={(e) => set('translator', e.target.value)} />}
           </Field>
         </div>
         <div className="form-grid two">
@@ -189,7 +189,7 @@ export function BookForm() {
         </div>
         <div className="form-grid two">
           <Field label={t('add.publisher')} optional={t('common.optional')}>
-            {(p) => <input {...p} dir="auto" value={v.publisher} onChange={(e) => set('publisher', e.target.value)} />}
+            {(p) => <input {...p} dir="auto" maxLength={200} value={v.publisher} onChange={(e) => set('publisher', e.target.value)} />}
           </Field>
           <Field label={t('add.year')} optional={t('common.optional')} error={err('year')}>
             {(p) => <input {...p} dir="ltr" inputMode="numeric" maxLength={4} value={v.year} onChange={(e) => set('year', e.target.value)} />}

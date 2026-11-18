@@ -84,7 +84,7 @@ export function Signup() {
 
       <form className="form-grid" onSubmit={submit} noValidate>
         <Field label={t('signup.firstName')} error={err('firstName')}>
-          {(p) => <input {...p} autoComplete="given-name" value={v.firstName} onChange={(e) => set('firstName', e.target.value)} dir="auto" />}
+          {(p) => <input {...p} autoComplete="given-name" maxLength={60} value={v.firstName} onChange={(e) => set('firstName', e.target.value)} dir="auto" />}
         </Field>
         <Field label={t('signup.email')} error={err('email')}>
           {(p) => <input {...p} type="email" autoComplete="email" inputMode="email" dir="ltr" value={v.email} onChange={(e) => set('email', e.target.value)} />}
@@ -106,7 +106,7 @@ export function Signup() {
           </p>
         )}
         <Field label={t('signup.telegram')} optional={t('common.optional')} hint={t('signup.telegramHint')} error={err('telegram')}>
-          {(p) => <input {...p} dir="ltr" autoComplete="off" placeholder="@username" value={v.telegram} onChange={(e) => set('telegram', e.target.value)} />}
+          {(p) => <input {...p} dir="ltr" autoComplete="off" maxLength={33} placeholder="@username" value={v.telegram} onChange={(e) => set('telegram', e.target.value)} />}
         </Field>
 
         <div className="card">

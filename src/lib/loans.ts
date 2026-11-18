@@ -57,6 +57,16 @@ export interface BlockMessage {
   action?: { labelKey: TKey; to: string };
 }
 
+/** The message for a failed loan action, by error code from the database. */
+export function loanErrorMessage(code: BlockReason | 'not_allowed' | 'bad_state' | 'unknown'): TKey {
+  switch (code) {
+    case 'not_allowed': return 'loan.error.notAllowed';
+    case 'bad_state': return 'loan.actionFailed';
+    case 'unknown': return 'common.error';
+    default: return blockMessage(code, '').textKey;
+  }
+}
+
 /** Why a member can't request this book yet, and the button that fixes it. */
 export function blockMessage(reason: BlockReason, bookId: string): BlockMessage {
   const myLoans = { labelKey: 'block.action.myLoans' as const, to: '/me?tab=loans' };

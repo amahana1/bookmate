@@ -84,7 +84,7 @@ export function Account() {
         {failed && <ErrorBox>{t('common.error')}</ErrorBox>}
         <form className="form-grid" onSubmit={saveProfile} noValidate>
           <Field label={t('signup.firstName')} error={errors.firstName && t(errors.firstName)}>
-            {(p) => <input {...p} dir="auto" value={firstName} onChange={(e) => setFirstName(e.target.value)} />}
+            {(p) => <input {...p} dir="auto" maxLength={60} value={firstName} onChange={(e) => setFirstName(e.target.value)} />}
           </Field>
           <div className="field">
             <span className="label">{t('signup.email')}</span>
@@ -99,7 +99,7 @@ export function Account() {
             </Field>
           </div>
           <Field label={t('signup.telegram')} optional={t('common.optional')} hint={t('signup.telegramHint')} error={errors.telegram && t(errors.telegram)}>
-            {(p) => <input {...p} dir="ltr" placeholder="@username" value={telegram} onChange={(e) => setTelegram(e.target.value)} />}
+            {(p) => <input {...p} dir="ltr" maxLength={33} placeholder="@username" value={telegram} onChange={(e) => setTelegram(e.target.value)} />}
           </Field>
           <div><button className="btn btn-primary" disabled={busy}>{busy ? t('common.saving') : t('common.save')}</button></div>
         </form>
