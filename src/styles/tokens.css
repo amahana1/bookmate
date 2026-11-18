@@ -1,0 +1,17 @@
+/* Doc 3 §3 — the only colours. */
+:root {
+  --teal: #0B6B67;       /* primary: buttons, links, header */
+  --teal-hover: #08524F; /* hover of the primary button */
+  --ink: #10242A;        /* body text, dark sections */
+  --slate: #4A5E64;      /* secondary text */
+  --white: #FFFFFF;      /* page background */
+  --mist: #EEF6F5;       /* cards, alternate sections */
+  --tint: #D9F0ED;       /* secondary button fill */
+  --turquoise: #43BDB3;  /* fills and highlights only */
+  --saffron: #F4B63F;    /* highlight fills only */
+  --border: #738B8F;     /* input borders, meaningful dividers */
+  --hairline: #D7E6E4;   /* decorative lines only */
+
+  --font-body: "Vazirmatn Variable", Vazirmatn, Tahoma, sans-serif;
+  --font-display: Lalezar, "Vazirmatn Variable", Vazirmatn, Tahoma, sans-serif;
+}
