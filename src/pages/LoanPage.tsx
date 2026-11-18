@@ -43,7 +43,7 @@ export function LoanPage() {
       setLoan(l);
       if (!l) return;
       setEvents(await getLoanEvents(id));
-      setContacts(SHOW_CONTACTS.has(l.status) ? await getLoanContacts(id) : []);
+      setContacts(l.accepted_at && SHOW_CONTACTS.has(l.status) ? await getLoanContacts(id) : []);
       if (l.handover_method === 'meetup') setMeetup(l.meetup_id ? await getMeetup(l.meetup_id) : await nextMeetup());
     } catch {
       setLoan(null);
@@ -63,26 +63,31 @@ export function LoanPage() {
   const other = isOwner ? loan.borrower_first_name : loan.owner_first_name;
   const { box, overdue } = nextAction(loan, me, berlinToday());
 
-  const run = async (fn: () => Promise<unknown>) => {
+  /** Runs a loan action; returns true on success. The page reloads either way so stale buttons disappear. */
+  const run = async (fn: () => Promise<unknown>): Promise<boolean> => {
     setBusy(true);
     setActionFailed(false);
+    let ok = false;
     try {
       await fn();
+      ok = true;
       toast.show(t('loan.actionDone'));
       notifyLoansChanged();
-      await load();
     } catch {
       setActionFailed(true);
     } finally {
+      await load();
       setBusy(false);
     }
+    return ok;
   };
 
   const sendReport = async (e: FormEvent) => {
     e.preventDefault();
-    await run(() => reportProblem(loan.id, kind, reportText));
-    setReported(true);
-    setReportText('');
+    if (await run(() => reportProblem(loan.id, kind, reportText))) {
+      setReported(true);
+      setReportText('');
+    }
   };
 
   const btn = (labelKey: TKey, fn: () => Promise<unknown>, primary = true) => (
@@ -140,7 +145,7 @@ export function LoanPage() {
       </nav>
       <div className="section" style={{ display: 'flex', gap: 18, alignItems: 'flex-start' }}>
         <BookCover book={{ id: loan.book_id, title: loan.book_title, cover_path: loan.book_cover_path }} small />
-        <div className="stack" style={{ gap: 6 }}>
+        <div className="stack" style={{ gap: 6, minWidth: 0 }}>
           <h1 style={{ margin: 0 }}><Link to={`/books/${loan.book_id}`} dir="auto" style={{ color: 'inherit' }}>{loan.book_title}</Link></h1>
           <p className="lead" style={{ margin: 0 }}>{t(`loan.status.${loan.status}`)}</p>
           <p className="muted" style={{ margin: 0 }}>
@@ -198,7 +203,7 @@ export function LoanPage() {
         ) : <MeetupBox />}
       </div>
 
-      {isParty && loan.status !== 'requested' && (
+      {isParty && loan.accepted_at && (
         <section className="section form-narrow">
           <h2>{t('loan.problemTitle')}</h2>
           {reported ? <StatusBox><p style={{ margin: 0 }}>{t('loan.problemSent')}</p></StatusBox> : (

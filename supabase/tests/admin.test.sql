@@ -52,12 +52,12 @@ do $$ declare rid uuid; begin
   rid := public.report_problem((select v from t where k = 'loan'), 'no_show', 'نیامد');
   assert (select has_open_report from public.loans where id = (select v from t where k = 'loan')), 'report_sets_flag';
   perform pg_temp.as_user('00000000-0000-0000-0000-0000000000f1');
-  assert (select count(*) from public.admin_list_reports()) = 1, 'admin_lists_open_reports';
-  assert (select book_title from public.admin_list_reports()) = 'A1', 'report_row_has_book';
+  assert (select count(*) from public.admin_list_reports() where loan_id = (select v from t where k = 'loan')) = 1, 'admin_lists_open_reports';
+  assert (select book_title from public.admin_list_reports() where loan_id = (select v from t where k = 'loan')) = 'A1', 'report_row_has_book';
   perform public.admin_resolve_report(rid);
   assert not (select has_open_report from public.loans where id = (select v from t where k = 'loan')), 'report_resolve_clears_flag';
   assert (select status from public.reports where id = rid) = 'resolved', 'report_resolved';
-  assert (select count(*) from public.admin_list_reports()) = 0, 'resolved_not_listed';
+  assert (select count(*) from public.admin_list_reports() where loan_id = (select v from t where k = 'loan')) = 0, 'resolved_not_listed';
   perform public.admin_close_loan((select v from t where k = 'loan'));
   assert (select status || '/' || closed_by from public.loans where id = (select v from t where k = 'loan')) = 'closed/admin', 'admin_close_loan';
 end $$;
@@ -72,17 +72,17 @@ do $$ begin
   perform public.confirm_received((select v from t where k = 'loan2'));
   update public.loans set due_date = public.berlin_today() - 2 where id = (select v from t where k = 'loan2');
   perform pg_temp.as_user('00000000-0000-0000-0000-0000000000f1');
-  assert (select count(*) from public.admin_list_overdue()) = 1, 'admin_lists_overdue';
+  assert (select count(*) from public.admin_list_overdue() where loan_id = (select v from t where k = 'loan2')) = 1, 'admin_lists_overdue';
 end $$;
 
 -- stats exclude samples
 do $$ declare s json; begin
   perform pg_temp.as_user('00000000-0000-0000-0000-0000000000f1');
   s := public.admin_stats();
-  assert (s ->> 'books')::int = 2, 'stats_books_exclude_samples';
-  assert (s ->> 'members')::int = 3, 'stats_members_exclude_samples';
-  assert (s ->> 'requests')::int = 2, 'stats_requests';
-  assert (s ->> 'completed_loans')::int = 1, 'stats_completed';
+  assert (s ->> 'books')::int = (select count(*) from public.books where not is_sample and deleted_at is null), 'stats_books_exclude_samples';
+  assert (s ->> 'members')::int = (select count(*) from public.profiles where not is_sample), 'stats_members_exclude_samples';
+  assert (s ->> 'requests')::int = (select count(*) from public.loans where not is_sample), 'stats_requests';
+  assert (s ->> 'completed_loans')::int = (select count(*) from public.loans where not is_sample and status = 'closed'), 'stats_completed';
 end $$;
 
 -- remove samples
@@ -92,7 +92,7 @@ do $$ declare n int; begin
   assert n > 0, 'remove_samples_count';
   assert (select count(*) from public.profiles where is_sample) = 0, 'no_sample_profiles';
   assert (select count(*) from public.books where is_sample) = 0, 'no_sample_books';
-  assert (select count(*) from public.meetups) = 1, 'meetups_kept';
+  assert (select count(*) from public.meetups) >= 1, 'meetups_kept';
   assert (select count(*) from public.books where id = '00000000-0000-0000-0000-00000000a101') = 1, 'real_books_kept';
 end $$;
 

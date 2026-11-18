@@ -17,6 +17,8 @@ h1 { font-size: 44px; margin: 0 0 14px; }
 h2 { font-size: 30px; margin: 0 0 14px; }
 h3 { font-size: 19px; font-weight: 600; line-height: 1.6; margin: 0 0 8px; }
 p { margin: 0 0 14px; }
+/* Long unbreakable strings (emails, German compounds, titles) wrap instead of widening the page. */
+h1, h2, h3, p, li, dd, dt, td, th, a, .book-title, .book-author, .meta, .title, .chip, address { overflow-wrap: anywhere; }
 .lead { font-size: 19px; color: var(--slate); }
 .small, small { font-size: 15px; }
 .muted { color: var(--slate); }
