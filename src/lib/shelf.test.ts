@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Book } from '../types';
 import { BERLIN_ORTSTEILE, BEZIRKE, bezirkOf } from './berlin';
-import { districtCounts, districtLevel, groupShelf, rankDistricts, spineFor, SPINE_TONES } from './shelf';
+import { districtCounts, districtLevel, groupShelf, spineFor, SPINE_TONES } from './shelf';
 import { BERLIN_MAP_HEIGHT, BERLIN_MAP_WIDTH, DISTRICT_SHAPES } from './berlin-map';
 
 function book(p: Partial<Book>): Book {
@@ -49,15 +49,6 @@ describe('districtLevel', () => {
   });
   it('never divides by zero when no district has books', () => {
     expect(districtLevel(0, 0)).toBe(0);
-  });
-});
-
-describe('rankDistricts', () => {
-  it('lists all 12 Bezirke, most books first, ties in German alphabetical order', () => {
-    const counts = districtCounts([book({ neighbourhood: 'Wedding' }), book({ neighbourhood: 'Wedding' }), book({ neighbourhood: 'Britz' })]);
-    const ranked = rankDistricts(counts);
-    expect(ranked).toHaveLength(12);
-    expect(ranked.slice(0, 3)).toEqual([{ name: 'Mitte', count: 2 }, { name: 'Neukölln', count: 1 }, { name: 'Charlottenburg-Wilmersdorf', count: 0 }]);
   });
 });
 

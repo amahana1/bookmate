@@ -48,9 +48,3 @@ export function districtLevel(n: number, max: number): 0 | 1 | 2 | 3 {
   if (n === 0 || max <= 0) return 0;
   return n >= max * 0.66 ? 3 : n >= max * 0.33 ? 2 : 1;
 }
-
-/** All 12 Bezirke with their counts, most books first; ties in German alphabetical order. */
-export function rankDistricts(counts: Record<string, number>): { name: string; count: number }[] {
-  return BEZIRKE.map((name) => ({ name, count: counts[name] ?? 0 }))
-    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'de'));
-}
