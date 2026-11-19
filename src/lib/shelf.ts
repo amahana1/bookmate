@@ -43,18 +43,14 @@ export function districtCounts(books: Pick<Book, 'neighbourhood'>[]): Record<str
   return counts;
 }
 
-/** Tile position on a 5×4 geographic grid (column 1 = west). */
-export const DISTRICT_TILES: Record<string, { col: number; row: number }> = {
-  Reinickendorf: { col: 2, row: 1 },
-  Pankow: { col: 3, row: 1 },
-  Spandau: { col: 1, row: 2 },
-  'Charlottenburg-Wilmersdorf': { col: 2, row: 2 },
-  Mitte: { col: 3, row: 2 },
-  Lichtenberg: { col: 4, row: 2 },
-  'Marzahn-Hellersdorf': { col: 5, row: 2 },
-  'Steglitz-Zehlendorf': { col: 2, row: 3 },
-  'Tempelhof-Schöneberg': { col: 3, row: 3 },
-  'Friedrichshain-Kreuzberg': { col: 4, row: 3 },
-  Neukölln: { col: 4, row: 4 },
-  'Treptow-Köpenick': { col: 5, row: 4 },
-};
+/** Map shade for a district: 0 = no books, then 1–3 by its share of the busiest district. */
+export function districtLevel(n: number, max: number): 0 | 1 | 2 | 3 {
+  if (n === 0 || max <= 0) return 0;
+  return n >= max * 0.66 ? 3 : n >= max * 0.33 ? 2 : 1;
+}
+
+/** All 12 Bezirke with their counts, most books first; ties in German alphabetical order. */
+export function rankDistricts(counts: Record<string, number>): { name: string; count: number }[] {
+  return BEZIRKE.map((name) => ({ name, count: counts[name] ?? 0 }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'de'));
+}

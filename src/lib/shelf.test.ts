@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { Book } from '../types';
 import { BERLIN_ORTSTEILE, BEZIRKE, bezirkOf } from './berlin';
-import { districtCounts, groupShelf, spineFor, SPINE_TONES } from './shelf';
+import { districtCounts, districtLevel, groupShelf, rankDistricts, spineFor, SPINE_TONES } from './shelf';
+import { BERLIN_MAP_HEIGHT, BERLIN_MAP_WIDTH, DISTRICT_SHAPES } from './berlin-map';
 
 function book(p: Partial<Book>): Book {
   return {
@@ -35,6 +36,42 @@ describe('districtCounts', () => {
     expect(c['Friedrichshain-Kreuzberg']).toBe(2);
     expect(c.Mitte).toBe(1);
     expect(c.Spandau).toBe(0);
+  });
+});
+
+describe('districtLevel', () => {
+  it('is 0 for an empty district and 1–3 by share of the busiest one', () => {
+    expect(districtLevel(0, 9)).toBe(0);
+    expect(districtLevel(2, 9)).toBe(1);
+    expect(districtLevel(3, 9)).toBe(2);
+    expect(districtLevel(6, 9)).toBe(3);
+    expect(districtLevel(9, 9)).toBe(3);
+  });
+  it('never divides by zero when no district has books', () => {
+    expect(districtLevel(0, 0)).toBe(0);
+  });
+});
+
+describe('rankDistricts', () => {
+  it('lists all 12 Bezirke, most books first, ties in German alphabetical order', () => {
+    const counts = districtCounts([book({ neighbourhood: 'Wedding' }), book({ neighbourhood: 'Wedding' }), book({ neighbourhood: 'Britz' })]);
+    const ranked = rankDistricts(counts);
+    expect(ranked).toHaveLength(12);
+    expect(ranked.slice(0, 3)).toEqual([{ name: 'Mitte', count: 2 }, { name: 'Neukölln', count: 1 }, { name: 'Charlottenburg-Wilmersdorf', count: 0 }]);
+  });
+});
+
+describe('DISTRICT_SHAPES', () => {
+  it('has a drawn shape for exactly the 12 Bezirke the app uses', () => {
+    expect(Object.keys(DISTRICT_SHAPES).sort()).toEqual([...BEZIRKE].sort());
+  });
+  it('places every label inside the map', () => {
+    for (const [name, s] of Object.entries(DISTRICT_SHAPES)) {
+      expect(s.x, name).toBeGreaterThan(0);
+      expect(s.x, name).toBeLessThan(BERLIN_MAP_WIDTH);
+      expect(s.y, name).toBeGreaterThan(0);
+      expect(s.y, name).toBeLessThan(BERLIN_MAP_HEIGHT);
+    }
   });
 });
 
