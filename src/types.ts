@@ -2,8 +2,8 @@ export type Locale = 'fa' | 'de' | 'en';
 export type LoanStatus = 'requested' | 'accepted' | 'reading' | 'return_marked' | 'closed' | 'declined' | 'cancelled' | 'expired' | 'withdrawn';
 export type Handover = 'meetup' | 'in_person';
 export type BookLang = 'fa' | 'de' | 'en' | 'ar' | 'tr' | 'uk' | 'ru' | 'ku' | 'bilingual' | 'other';
-export type Category = 'novel' | 'poetry' | 'children' | 'history_society' | 'biography_graphic' | 'other';
-export type Condition = 'like_new' | 'good' | 'worn';
+export type Category = 'novel' | 'poetry' | 'history_biography' | 'psychology' | 'philosophy_society' | 'science_education' | 'children';
+export type Condition = 'like_new' | 'good';
 export type BlockReason = 'not_logged_in' | 'no_own_book' | 'has_active_loan' | 'too_many_pending' | 'has_overdue' | 'own_book' | 'sample_book' | 'book_unavailable' | 'already_requested';
 export type ReportKind = 'not_received' | 'no_show' | 'lost' | 'damaged' | 'other';
 

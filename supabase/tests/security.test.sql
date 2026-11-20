@@ -62,7 +62,7 @@ end $$;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000b1","role":"authenticated"}', true);
 insert into public.books (title, author, language, category, condition, loan_months, handover_methods) values
   ('بوف کور', 'صادق هدایت', 'fa', 'novel', 'good', 2, '{meetup,in_person}'),
-  ('سووشون', 'سیمین دانشور', 'fa', 'novel', 'worn', 1, '{in_person}');
+  ('سووشون', 'سیمین دانشور', 'fa', 'novel', 'good', 1, '{in_person}');
 -- RLS hides A's book from B's update: it must touch 0 rows.
 update public.books set title = 'x' where owner_id = '00000000-0000-0000-0000-0000000000a1';
 

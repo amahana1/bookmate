@@ -22,3 +22,7 @@ services:
         sync: false
       - key: VITE_EMAIL_ENABLED
         value: "false"
+      # Google Books search on the add-book form (browser key, restricted to this site + Books API).
+      # Without it the title field is a plain text field.
+      - key: VITE_GOOGLE_BOOKS_KEY
+        sync: false

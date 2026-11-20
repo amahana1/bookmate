@@ -42,7 +42,6 @@ export function telegramError(raw: string): TKey | undefined {
 
 export interface BookFormValues {
   title: string;
-  title_latin: string;
   author: string;
   translator: string;
   publisher: string;

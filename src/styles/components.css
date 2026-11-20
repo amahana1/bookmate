@@ -141,6 +141,28 @@ fieldset.options legend { font-size: 15px; font-weight: 500; padding-inline: 6px
 .form-grid { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr); }
 .form-grid.two { grid-template-columns: 1fr 1fr; }
 @media (max-width: 620px) { .form-grid.two { grid-template-columns: 1fr; } }
+.req { color: var(--teal); font-weight: 700; }
+
+/* Title search: Google Books suggestions under the title input */
+.combo { position: relative; }
+.combo > input { width: 100%; }
+.combo-pop {
+  position: absolute; inset-inline: 0; top: calc(100% + 6px); z-index: 20;
+  background: var(--white); border: 2px solid var(--ink); border-radius: 12px; padding: 6px; max-height: 420px; overflow-y: auto;
+}
+.combo-pop ul { list-style: none; margin: 0; padding: 0; }
+.combo-pop li {
+  display: flex; gap: 12px; align-items: center; min-height: 64px; padding: 6px 10px; border-radius: 8px; cursor: pointer;
+}
+.combo-pop li[aria-selected="true"] { background: var(--tint); box-shadow: inset 0 0 0 2px var(--teal); }
+.combo-pop li img, .combo-noimg { width: 36px; height: 54px; flex: none; border-radius: 4px; object-fit: cover; background: var(--mist); }
+.combo-text { display: flex; flex-direction: column; min-width: 0; }
+.combo-title { font-weight: 700; overflow-wrap: anywhere; }
+.combo-meta { font-size: 15px; color: var(--slate); overflow-wrap: anywhere; }
+.combo-status { margin: 0; padding: 10px; color: var(--slate); font-size: 15px; }
+.combo-foot { margin: 4px 0 0; padding: 6px 10px 2px; border-top: 1px solid var(--hairline); color: var(--slate); font-size: 15px; }
+.google-cover { display: flex; gap: 14px; align-items: center; }
+.google-cover img { width: 64px; height: 96px; object-fit: cover; border-radius: 6px; background: var(--mist); flex: none; }
 .form-narrow { max-width: 520px; }
 
 /* Numbered steps */

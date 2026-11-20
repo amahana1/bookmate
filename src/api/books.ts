@@ -45,7 +45,6 @@ function toRow(v: BookFormValues) {
   const year = toAsciiDigits(v.year.trim());
   return {
     title: v.title.trim(),
-    title_latin: opt(v.title_latin),
     author: v.author.trim(),
     translator: opt(v.translator),
     publisher: opt(v.publisher),

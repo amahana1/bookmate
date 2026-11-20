@@ -5,23 +5,25 @@ import { useAuth } from '../auth/AuthProvider';
 import { createBook, DuplicateBookError, getBook, updateBook } from '../api/books';
 import { validateBook, type BookFormValues, type Errors } from '../lib/validate';
 import { BOOK_LANGS, CATEGORIES } from '../lib/books';
+import { applySuggestion, EMPTY_BOOK as EMPTY } from '../lib/bookForm';
+import type { BookSuggestion } from '../lib/googleBooks';
+import { fetchGoogleCover } from '../api/googleCover';
 import { isAcceptedImage, resizeImage } from '../lib/covers';
 import { buildLoginUrl } from '../lib/auth-url';
 import { SITE_URL } from '../lib/config';
 import type { Book, Handover } from '../types';
 import { Field } from '../components/Field';
+import { TitleSearch } from '../components/TitleSearch';
 import { ErrorBox, Loading, StatusBox, useToast } from '../components/Feedback';
 import { BookCover } from '../components/BookBits';
 import { NotFound } from './NotFound';
 
-const EMPTY: BookFormValues = {
-  title: '', title_latin: '', author: '', translator: '', publisher: '', language: '', category: '',
-  year: '', condition: '', loan_months: '1', handover_methods: ['meetup', 'in_person'],
-};
+const CONDITIONS = ['like_new', 'good'] as const;
+const Req = () => <span className="req" aria-hidden="true"> *</span>;
 
 function fromBook(b: Book): BookFormValues {
   return {
-    title: b.title, title_latin: b.title_latin ?? '', author: b.author, translator: b.translator ?? '', publisher: b.publisher ?? '',
+    title: b.title, author: b.author, translator: b.translator ?? '', publisher: b.publisher ?? '',
     language: b.language, category: b.category, year: b.year ? String(b.year) : '', condition: b.condition,
     loan_months: String(b.loan_months) as '1' | '2' | '3', handover_methods: b.handover_methods,
   };
@@ -45,6 +47,8 @@ export function BookForm() {
   const [failed, setFailed] = useState(false);
   const [done, setDone] = useState<Book | null>(null);
   const [failedAttempts, setFailedAttempts] = useState(0);
+  const [googleCover, setGoogleCover] = useState<BookSuggestion | null>(null);
+  const [lastPick, setLastPick] = useState<BookSuggestion | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -77,6 +81,22 @@ export function BookForm() {
   const toggleHandover = (h: Handover, on: boolean) =>
     set('handover_methods', on ? [...new Set([...v.handover_methods, h])] : v.handover_methods.filter((x) => x !== h));
   const err = (k: keyof BookFormValues) => (errors[k] ? t(errors[k]!) : undefined);
+  const pickSuggestion = (s: BookSuggestion) => {
+    setV((o) => applySuggestion(o, s, lastPick));
+    setLastPick(s);
+    setErrors((e) => {
+      const next = { ...e };
+      delete next.title;
+      if (s.author) delete next.author;
+      if (s.year) delete next.year;
+      if (s.language) delete next.language;
+      if (s.category) delete next.category;
+      return next;
+    });
+    setGoogleCover(s.thumbnail ? s : null);
+    setRemoveCover(false);
+    toast.show(t('add.filled'));
+  };
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -86,7 +106,10 @@ export function BookForm() {
     if (Object.keys(found).length || coverError) return setFailedAttempts((n) => n + 1);
     setBusy(true);
     try {
-      const blob = cover ? await resizeImage(cover) : removeCover ? null : undefined;
+      // A photo the member chose wins; otherwise the Google Books cover they kept (skipped quietly if it can't be fetched).
+      const fromGoogle = !cover && googleCover ? await fetchGoogleCover(googleCover.id) : null;
+      const file = cover ?? fromGoogle;
+      const blob = file ? await resizeImage(file) : removeCover ? null : undefined;
       if (editing && original) {
         await updateBook(original.id, v, blob, original.cover_path);
         toast.show(t('add.savedText'));
@@ -128,7 +151,7 @@ export function BookForm() {
           <div className="btn-row">
             <Link className="btn btn-primary btn-small" to={`/books/${done.id}`}>{t('add.view')}</Link>
             <button type="button" className="btn btn-secondary btn-small" onClick={share}>{t('add.share')}</button>
-            <button type="button" className="btn btn-secondary btn-small" onClick={() => { setDone(null); setV(EMPTY); setCover(null); }}>{t('add.another')}</button>
+            <button type="button" className="btn btn-secondary btn-small" onClick={() => { setDone(null); setV(EMPTY); setCover(null); setGoogleCover(null); setLastPick(null); }}>{t('add.another')}</button>
           </div>
         </StatusBox>
       </div>
@@ -154,23 +177,21 @@ export function BookForm() {
       {Object.keys(errors).length > 0 && <ErrorBox focusKey={failedAttempts}>{t('signup.fixErrors')}</ErrorBox>}
 
       <form className="form-grid" onSubmit={submit} noValidate>
-        <h2 style={{ margin: '12px 0 0' }}>{t('add.aboutBook')}</h2>
-        <Field label={t('add.titleField')} error={err('title')}>
-          {(p) => <input {...p} dir="auto" maxLength={200} value={v.title} onChange={(e) => set('title', e.target.value)} />}
-        </Field>
-        <Field label={t('add.titleLatin')} optional={t('common.optional')} hint={t('add.titleLatinHint')}>
-          {(p) => <input {...p} dir="ltr" lang="en" maxLength={200} value={v.title_latin} onChange={(e) => set('title_latin', e.target.value)} />}
+        <p className="small muted" style={{ margin: 0 }}>{t('add.requiredNote')}</p>
+        <h2 style={{ margin: '4px 0 0' }}>{t('add.aboutBook')}</h2>
+        <Field label={t('add.titleField')} required error={err('title')}>
+          {(p) => <TitleSearch control={p} value={v.title} onChange={(title) => set('title', title)} onPick={pickSuggestion} />}
         </Field>
         <div className="form-grid two">
-          <Field label={t('add.author')} error={err('author')}>
+          <Field label={t('add.author')} required error={err('author')}>
             {(p) => <input {...p} dir="auto" maxLength={200} value={v.author} onChange={(e) => set('author', e.target.value)} />}
           </Field>
-          <Field label={t('add.translator')} optional={t('common.optional')} hint={t('add.translatorHint')}>
+          <Field label={t('add.translator')}>
             {(p) => <input {...p} dir="auto" maxLength={200} value={v.translator} onChange={(e) => set('translator', e.target.value)} />}
           </Field>
         </div>
         <div className="form-grid two">
-          <Field label={t('add.language')} error={err('language')}>
+          <Field label={t('add.language')} required error={err('language')}>
             {(p) => (
               <select {...p} value={v.language} onChange={(e) => set('language', e.target.value)}>
                 <option value="">{t('add.choose')}</option>
@@ -178,7 +199,7 @@ export function BookForm() {
               </select>
             )}
           </Field>
-          <Field label={t('add.category')} error={err('category')}>
+          <Field label={t('add.category')} required error={err('category')}>
             {(p) => (
               <select {...p} value={v.category} onChange={(e) => set('category', e.target.value)}>
                 <option value="">{t('add.choose')}</option>
@@ -188,14 +209,14 @@ export function BookForm() {
           </Field>
         </div>
         <div className="form-grid two">
-          <Field label={t('add.publisher')} optional={t('common.optional')}>
+          <Field label={t('add.publisher')}>
             {(p) => <input {...p} dir="auto" maxLength={200} value={v.publisher} onChange={(e) => set('publisher', e.target.value)} />}
           </Field>
-          <Field label={t('add.year')} optional={t('common.optional')} error={err('year')}>
+          <Field label={t('add.year')} error={err('year')}>
             {(p) => <input {...p} dir="ltr" inputMode="numeric" maxLength={4} value={v.year} onChange={(e) => set('year', e.target.value)} />}
           </Field>
         </div>
-        <Field label={t('add.cover')} optional={t('common.optional')} hint={t('add.coverHint')} error={coverError ? t('book.error.cover') : undefined}>
+        <Field label={t('add.cover')} error={coverError ? t('book.error.cover') : undefined}>
           {(p) => (
             <input {...p} type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => {
               const f = e.target.files?.[0] ?? null;
@@ -205,26 +226,35 @@ export function BookForm() {
             }} />
           )}
         </Field>
-        {editing && original?.cover_path && !cover && (
+        {googleCover?.thumbnail && !cover && (
+          <div className="google-cover">
+            <img src={googleCover.thumbnail} alt="" width={64} height={96} />
+            <div>
+              <p style={{ margin: 0 }}>{t('add.googleCover')}</p>
+              <button type="button" className="btn-link" onClick={() => setGoogleCover(null)}>{t('add.googleCoverRemove')}</button>
+            </div>
+          </div>
+        )}
+        {editing && original?.cover_path && !cover && !googleCover && (
           <label className="option"><input type="checkbox" checked={removeCover} onChange={(e) => setRemoveCover(e.target.checked)} />{t('add.removeCover')}</label>
         )}
 
         <h2 style={{ margin: '12px 0 0' }}>{t('add.aboutCopy')}</h2>
         <fieldset className="options">
-          <legend>{t('add.condition')}</legend>
-          {(['like_new', 'good', 'worn'] as const).map((c) => (
-            <label key={c} className="option"><input type="radio" name="condition" checked={v.condition === c} onChange={() => set('condition', c)} />{t(`cond.${c}`)}</label>
+          <legend>{t('add.condition')}<Req /></legend>
+          {CONDITIONS.map((c) => (
+            <label key={c} className="option"><input type="radio" name="condition" required checked={v.condition === c} onChange={() => set('condition', c)} />{t(`cond.${c}`)}</label>
           ))}
           {errors.condition && <span className="field-error">{t(errors.condition)}</span>}
         </fieldset>
         <fieldset className="options">
-          <legend>{t('add.loanMonths')}</legend>
+          <legend>{t('add.loanMonths')}<Req /></legend>
           {(['1', '2', '3'] as const).map((m) => (
-            <label key={m} className="option"><input type="radio" name="months" checked={v.loan_months === m} onChange={() => set('loan_months', m)} />{t('add.months', { n: Number(m) })}</label>
+            <label key={m} className="option"><input type="radio" name="months" required checked={v.loan_months === m} onChange={() => set('loan_months', m)} />{t('add.months', { n: Number(m) })}</label>
           ))}
         </fieldset>
         <fieldset className="options" aria-invalid={errors.handover_methods ? true : undefined}>
-          <legend>{t('add.handover')}</legend>
+          <legend>{t('add.handover')}<Req /></legend>
           <label className="option"><input type="checkbox" checked={v.handover_methods.includes('meetup')} onChange={(e) => toggleHandover('meetup', e.target.checked)} />{t('add.handoverMeetup')}</label>
           <label className="option"><input type="checkbox" checked={v.handover_methods.includes('in_person')} onChange={(e) => toggleHandover('in_person', e.target.checked)} />{t('add.handoverInPerson')}</label>
           {errors.handover_methods && <span className="field-error">{t(errors.handover_methods)}</span>}

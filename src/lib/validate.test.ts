@@ -41,7 +41,6 @@ describe('validateSignup', () => {
 
 const bookOk: BookFormValues = {
   title: 'بوف کور',
-  title_latin: '',
   author: 'صادق هدایت',
   translator: '',
   publisher: '',
@@ -59,6 +58,9 @@ describe('validateBook', () => {
   });
   it('requires a title', () => {
     expect(validateBook({ ...bookOk, title: '  ' }).title).toBe('book.error.required');
+  });
+  it('requires the book language', () => {
+    expect(validateBook({ ...bookOk, language: '' }).language).toBe('book.error.required');
   });
   it('requires at least one handover method', () => {
     expect(validateBook({ ...bookOk, handover_methods: [] }).handover_methods).toBe('book.error.handover');

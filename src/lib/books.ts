@@ -46,7 +46,7 @@ export function paginate<T>(items: T[], page: number, size = 12): { items: T[]; 
 }
 
 export const BOOK_LANGS: BookLang[] = ['fa', 'de', 'en', 'ar', 'tr', 'uk', 'ru', 'ku', 'bilingual', 'other'];
-export const CATEGORIES: Category[] = ['novel', 'poetry', 'children', 'history_society', 'biography_graphic', 'other'];
+export const CATEGORIES: Category[] = ['novel', 'poetry', 'history_biography', 'psychology', 'philosophy_society', 'science_education', 'children'];
 
 /** Stable 0–3 index choosing one of the four doc 3 cover colour combinations. */
 export function coverVariant(id: string): 0 | 1 | 2 | 3 {
