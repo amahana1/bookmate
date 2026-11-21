@@ -45,7 +45,8 @@ export function Shelf({ books, max = 18 }: { books: Book[]; max?: number }) {
       </div>
       <div className="shelf-plank" aria-hidden="true" />
       <div className="shelf-meta">
-        <span>{t('shelf.hint')}</span>
+        <span className="hint-mouse">{t('shelf.hint')}</span>
+        <span className="hint-touch">{t('shelf.hintTouch')}</span>
         <span>{t('shelf.count', { n: total })}</span>
       </div>
       {picked && (

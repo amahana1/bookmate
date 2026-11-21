@@ -281,6 +281,12 @@ dl.details dd { margin: 0; }
 .shelf { display: flex; align-items: flex-end; gap: 6px; padding: 34px 12px 0; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; min-height: 300px; }
 .shelf-plank { height: 14px; background: var(--ink); border-radius: 4px; }
 .shelf-meta { display: flex; justify-content: space-between; gap: 6px 12px; flex-wrap: wrap; color: var(--slate); font-size: 15px; padding-top: 6px; }
+/* Mouse users get "click a book"; touch screens get "swipe the shelf, tap a book". */
+.shelf-meta .hint-touch { display: none; }
+@media (hover: none) {
+  .shelf-meta .hint-mouse { display: none; }
+  .shelf-meta .hint-touch { display: inline; }
+}
 .bookend {
   flex: none; align-self: flex-end; writing-mode: vertical-rl; height: 124px; padding: 10px 6px; border-radius: 6px 6px 0 0;
   background: var(--ink); color: var(--turquoise); font-size: 15px; font-weight: 700; text-align: center; white-space: nowrap;
