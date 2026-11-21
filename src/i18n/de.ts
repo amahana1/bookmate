@@ -33,7 +33,7 @@ export const de: Record<keyof typeof fa, string> = {
   'footer.impressum': 'Impressum',
   'footer.telegram': 'Telegram-Gruppe',
   'footer.instagram': 'Instagram',
-  'footer.line': 'Book Mate · eine ehrenamtliche, nicht gewinnorientierte Initiative (Pilotprojekt Berlin)',
+  'footer.line': 'Book Mate · eine ehrenamtliche, soziale Initiative (Pilotprojekt Berlin)',
   'footer.nav': 'Fußzeilen-Links',
   'common.loading': 'Wird geladen…',
   'common.error': 'Etwas ist schiefgelaufen. Bitte versuche es noch einmal.',

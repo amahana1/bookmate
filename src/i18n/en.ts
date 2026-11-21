@@ -7,7 +7,7 @@ export const en: Record<keyof typeof fa, string> = {
   'brand.home': 'Book Mate, home',
   'proto.note': 'Prototype',
   'nav.books': 'Books',
-  'nav.how': 'How it works',
+  'nav.how': 'How it works?',
   'nav.add': 'Share your book',
   'nav.login': 'Log in',
   'nav.signup': 'Sign up',
